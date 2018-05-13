@@ -217,18 +217,10 @@ var blockhashData = function(imgData, bits, method) {
 };
 
 var blockhash = function(src, bits, method, callback) {
-    var xhr;
+    var isBrowser = typeof XMLHttpRequest != 'undefined';
 
-    xhr = new XMLHttpRequest();
-    xhr.open('GET', src, true);
-    xhr.responseType = "arraybuffer";
-
-    xhr.onload = function() {
-        var data, contentType, imgData, jpg, png, hash;
-
-        data = new Uint8Array(xhr.response || xhr.mozResponseArrayBuffer);
-        contentType = xhr.getResponseHeader('content-type');
-
+    function processImage(data, contentType) {
+        var imgData, png, hash;
         try {
             if (contentType === 'image/png') {
                 png = new PNG(data);
@@ -239,7 +231,20 @@ var blockhash = function(src, bits, method, callback) {
                     data: new Uint8Array(png.width * png.height * 4)
                 };
 
-                png.copyToImageData(imgData, png.decodePixels());
+                if (isBrowser) {
+                    png.copyToImageData(imgData, png.decodePixels());
+                    
+                } else {
+                    png.decode(function(pixels) {
+                        png.copyToImageData(imgData, pixels);
+
+                        hash = blockhashData(imgData, bits, method);
+                        callback(null, hash);
+                    });
+
+                    return;
+                }
+
             }
             else if (contentType === 'image/jpeg') {
                 imgData = jpeg.decode(data);
@@ -256,13 +261,47 @@ var blockhash = function(src, bits, method, callback) {
         } catch (err) {
             callback(err, null);
         }
-    };
+    }
 
-    xhr.onerror = function(err) {
-        callback(err, null);
-    };
+    if (isBrowser) { // browser
+        var xhr;
 
-    xhr.send();
+        xhr = new XMLHttpRequest();
+        xhr.open('GET', src, true);
+        xhr.responseType = "arraybuffer";
+
+        xhr.onload = function() {
+            var data, contentType;
+
+            data = new Uint8Array(xhr.response || xhr.mozResponseArrayBuffer);
+            contentType = xhr.getResponseHeader('content-type');
+
+            processImage(data, contentType);
+        };
+
+        xhr.onerror = function(err) {
+            callback(err, null);
+        };
+
+        xhr.send();
+    } else { // node.js
+        require('fs').readFile(src, function (err, data) {
+            var contentType;
+
+            if (err) {
+                callback(err, null);
+                return;
+            }
+
+            if (src.match(/\.jpe?g$/)) { // is jpg
+                contentType = 'image/jpeg';
+            } else { // png default
+                contentType = 'image/png';
+            }
+
+            processImage(data, contentType);
+        });
+    }
 };
 
 module.exports = {
