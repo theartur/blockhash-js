@@ -4,13 +4,15 @@ blockhash-js
 This is a perceptual image hash calculation tool based on algorithm descibed in
 Block Mean Value Based Image Perceptual Hashing by Bian Yang, Fan Gu and Xiamu Niu.
 
+Node.JS support by @theartur.
+
 Installation
 -----
 
-This module is installed via npm:
+This repository is a fork with added Node.JS support, and the module is installed via npm:
 
 ```
-  $ npm install blockhash
+  $ npm install https://github.com/theartur/blockhash-js
 ```
 
 Use in the browser
@@ -36,6 +38,18 @@ Include it and `zlib.js` on your page:
 </html>
 ```
 
+Use in Node.JS
+-----
+```
+var blockhash = require("blockhash").blockhash;
+blockhash("./example.png", 32, 2, function (err, hash) {
+	if (err) throw err;
+	console.log("example.png perceptual hash: ", result);
+});
+```
+
+Node.JS and browser use
+-----
 Call `blockhash(src, bits, method, callback)`, where
 `src` is an image URL, `bits` is the number of bits in a row, `method`
 is a number 1-2 (see below), and `callback` is a function with
